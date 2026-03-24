@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Robot Ghost Finder</title>
+
+<style>
+body{
+    background:#111;
+    color:white;
+    text-align:center;
+    font-family:sans-serif;
+}
+
+.map{
+    display:none;
+    grid-template-columns:repeat(4,80px);
+    gap:10px;
+    justify-content:center;
+    margin:20px;
+}
+
+.node{
+    border:1px solid white;
+    height:70px;
+    width:80px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    font-size:26px;
+}
+
+button{
+    padding:15px 25px;
+    font-size:18px;
+    margin:10px;
+}
+
+#paths{
+    margin-top:20px;
+    font-size:14px;
+    color:#aaa;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Robot Ghost Finder</h1>
+
+<p>Ghost Found: <span id="score">0</span>/3</p>
+
+<div id="map" class="map"></div>
+
+<button onclick="showMap()">Lihat Map</button>
+<button onclick="guess()">Pilih Robot</button>
+
+<div id="paths">
+<b>Robot Paths:</b><br>
+👾 A → C → G → A → F<br>
+😃 B → F → C → G → C<br>
+😾 A → B → C → E → D<br>
+🌞 F → G → C → E → D (60% mundur 2 langkah)
+</div>
+
+<script>
+const nodes = ["A","B","C","D","E","F","G"];
+
+const paths = {
+    alien:["A","C","G","A","F"],
+    smile:["B","F","C","G","C"],
+    cat:["A","B","C","E","D"],
+    sun:["F","G","C","E","D"]
+};
+
+const emojis = {
+    alien:"👾",
+    smile:"😃",
+    cat:"😾",
+    sun:"🌞"
+};
+
+// spawn acak
+let positions = {};
+for(let r in paths){
+    positions[r] = Math.floor(Math.random()*paths[r].length);
+}
+
+let ghost = Object.keys(paths)[Math.floor(Math.random()*4)];
+let ghostMode = ["slow","fast","glitch"][Math.floor(Math.random()*3)];
+
+let moveCount = 0;
+let ghostVisible = true;
+let score = 0;
+
+const mapDiv = document.getElementById("map");
+
+function drawMap(skip=null){
+    mapDiv.innerHTML="";
+
+    nodes.forEach(node=>{
+        let cell = document.createElement("div");
+        cell.className="node";
+
+        let robotsHere = "";
+        for(let r in positions){
+            if(r!==skip){
+                if(r===ghost && !ghostVisible) continue;
+                if(paths[r][positions[r]] === node){
+                    robotsHere += emojis[r];
+                }
+            }
+        }
+
+        cell.innerHTML = "<div>"+node+"</div><div>"+robotsHere+"</div>";
+        mapDiv.appendChild(cell);
+    });
+}
+
+function showMap(){
+    mapDiv.style.display = "grid";
+    drawMap();
+}
+
+function moveRobot(name){
+    drawMap(name);
+
+    let disappearTime = 5000;
+    if(name === ghost && ghostMode === "slow"){
+        disappearTime = 10000;
+    }
+
+    setTimeout(()=>{
+        if(name === "sun" && Math.random() < 0.6){
+            positions[name] -= 2;
+            if(positions[name] < 0){
+                positions[name] += paths[name].length;
+            }
+        }else{
+            positions[name] = (positions[name]+1) % paths[name].length;
+        }
+
+        if(name === ghost){
+            moveCount++;
+            if(ghostMode === "glitch" && moveCount >= 3){
+                ghostVisible = false;
+            }
+        }
+
+        drawMap();
+        scheduleMove(name);
+    },disappearTime);
+}
+
+function scheduleMove(name){
+    let delay = 5000;
+    if(name === ghost && ghostMode === "fast"){
+        delay = 2000;
+    }
+
+    setTimeout(()=>moveRobot(name),delay);
+}
+
+function startMovement(){
+    for(let r in paths){
+        scheduleMove(r);
+    }
+}
+
+function guess(){
+    let choice = prompt("Pilih robot: alien, smile, cat, sun");
+
+    ghostVisible = true;
+    drawMap();
+
+    if(!choice || choice.trim()===""){
+        return;
+    }
+
+    choice = choice.toLowerCase().trim();
+
+    if(choice === ghost){
+        score++;
+        alert("Benar! Hantu ditemukan.");
+
+        if(score >= 3){
+            alert("Kamu menang!");
+            location.reload();
+        }else{
+            ghost = Object.keys(paths)[Math.floor(Math.random()*4)];
+            ghostMode = ["slow","fast","glitch"][Math.floor(Math.random()*3)];
+            moveCount = 0;
+        }
+    }else{
+        alert("Salah! Game Over.");
+        location.reload();
+    }
+
+    document.getElementById("score").innerText = score;
+}
+
+startMovement();
+</script>
+
+</body>
+</html>
